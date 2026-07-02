@@ -9,7 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "colyseus.js": "^0.16.22",
+    "colyseus.js": "^0.15.28",
     "next": "16.2.9",
     "pixi.js": "^8.19.0",
     "react": "19.2.4",
