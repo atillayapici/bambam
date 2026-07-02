@@ -20,6 +20,7 @@ export class Player extends Schema {
   @type("number") currentAngle: number = 0;
   @type("number") speed: number = 4;
   @type("boolean") isBoosting: boolean = false;
+  @type("boolean") isBot: boolean = false;
   @type("number") score: number = 0;
   @type([Segment]) segments = new ArraySchema<Segment>();
 }

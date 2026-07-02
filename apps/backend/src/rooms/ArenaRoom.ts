@@ -8,7 +8,10 @@ export class ArenaRoom extends Room<ArenaState> {
     this.setState(new ArenaState());
     
     // Spawn initial foods
-    this.spawnFood(100);
+    this.spawnFood(150);
+
+    // Spawn 15 AI bots
+    this.spawnBots(15);
 
     // Game Loop (60 times per second)
     this.setSimulationInterval((deltaTime) => this.update(deltaTime));
@@ -58,7 +61,43 @@ export class ArenaRoom extends Room<ArenaState> {
     // Math logic for movement based on angle and speed
     const dt = deltaTime / (1000 / 60);
 
-    this.state.players.forEach((player) => {
+    this.state.players.forEach((player, sessionId) => {
+      // --- BOT AI LOGIC ---
+      if (player.isBot) {
+        if (Math.random() < 0.05) { // 5% chance per frame to change mind
+          let nearestFood: Food | null = null;
+          let minDist = Infinity;
+          
+          for (const [_, food] of this.state.foods.entries()) {
+            const distSq = Math.pow(food.x - player.x, 2) + Math.pow(food.y - player.y, 2);
+            if (distSq < minDist && distSq < 250000) { // ~500px radius
+              minDist = distSq;
+              nearestFood = food;
+            }
+          }
+
+          if (nearestFood) {
+            player.targetAngle = Math.atan2(nearestFood.y - player.y, nearestFood.x - player.x);
+          } else {
+            player.targetAngle += (Math.random() - 0.5) * 1.5;
+          }
+          
+          // Randomly boost if big enough
+          if (player.score > 50 && Math.random() < 0.1) {
+            player.isBoosting = true;
+          } else if (Math.random() < 0.2) {
+            player.isBoosting = false;
+          }
+        }
+
+        // Steer away from walls
+        const margin = 100;
+        if (player.x < margin) player.targetAngle = 0; // right
+        else if (player.x > 1900) player.targetAngle = Math.PI; // left
+        if (player.y < margin) player.targetAngle = Math.PI / 2; // down
+        else if (player.y > 1900) player.targetAngle = -Math.PI / 2; // up
+      }
+
       // Boost Logic
       if (player.isBoosting && player.score > 10) {
         player.speed = 8;
@@ -158,6 +197,30 @@ export class ArenaRoom extends Room<ArenaState> {
       f.value = Math.floor(f.size * 2);
       const id = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
       this.state.foods.set(id, f);
+    }
+  }
+
+  spawnBots(count: number) {
+    for (let i = 0; i < count; i++) {
+      const bot = new Player();
+      bot.x = Math.random() * 2000;
+      bot.y = Math.random() * 2000;
+      bot.score = 20 + Math.floor(Math.random() * 100); // Random starting score
+      bot.targetAngle = Math.random() * Math.PI * 2;
+      bot.currentAngle = bot.targetAngle;
+      bot.isBot = true;
+
+      // Add corresponding segments
+      const desiredSegments = 5 + Math.floor(bot.score / 20);
+      for (let j = 0; j < desiredSegments; j++) {
+        const seg = new Segment();
+        seg.x = bot.x;
+        seg.y = bot.y;
+        bot.segments.push(seg);
+      }
+      
+      const botId = "bot_" + Math.random().toString(36).substring(2, 8);
+      this.state.players.set(botId, bot);
     }
   }
 }
