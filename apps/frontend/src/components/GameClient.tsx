@@ -51,7 +51,7 @@ export default function GameClient() {
 
         try {
           setStatusMsg(`Bağlanılıyor → ${SERVER_URL}`);
-          const room = await client.joinOrCreate("arena");
+          const room = await client.joinOrCreate("arena") as any;
           roomRef.current = room;
           setStatus("connected");
           setStatusMsg(`✅ Bağlandı | ID: ${room.sessionId.slice(0, 8)}`);
@@ -143,7 +143,7 @@ export default function GameClient() {
       if (roomRef.current) { roomRef.current.leave(); roomRef.current = null; }
       if (resizeHandler) window.removeEventListener("resize", resizeHandler);
       if (app) {
-        try { app.destroy({ children: true }); } catch (_) { /* PixiJS v8 Strict Mode safe */ }
+        try { app.destroy({ removeView: true }); } catch (_) { /* PixiJS v8 Strict Mode safe */ }
       }
     };
   }, []);
