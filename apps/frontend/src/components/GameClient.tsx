@@ -54,7 +54,6 @@ export default function GameClient() {
           roomRef.current = room;
           setStatus("connected");
           setStatusMsg(`✅ Bağlandı | ID: ${room.sessionId.slice(0, 8)}`);
-          setPlayerCount(room.state.players.size);
 
           room.state.players.onAdd((player: any, sessionId: string) => {
             const isMe = sessionId === room.sessionId;
@@ -124,7 +123,7 @@ export default function GameClient() {
     return () => {
       if (roomRef.current) roomRef.current.leave();
       if (resizeHandler) window.removeEventListener("resize", resizeHandler);
-      if (app) app.destroy(false, { children: true });
+      if (app) app.destroy({ children: true });
     };
   }, []);
 
