@@ -180,6 +180,57 @@ export class ArenaRoom extends Room<ArenaState> {
           }
         }
       }
+
+      // --- SNAKE-TO-SNAKE COLLISION (DEATH) ---
+      let died = false;
+      for (const [otherId, otherPlayer] of this.state.players.entries()) {
+        if (sessionId === otherId) continue;
+        
+        for (let i = 0; i < otherPlayer.segments.length; i++) {
+          const seg = otherPlayer.segments[i]!;
+          const dx = player.x - seg.x;
+          const dy = player.y - seg.y;
+          const distSq = dx * dx + dy * dy;
+          
+          if (distSq < 625) { // 25 radius collision
+            died = true;
+            break;
+          }
+        }
+        if (died) break;
+      }
+
+      if (died) {
+        // Drop mass as food
+        for (let i = 0; i < player.segments.length; i++) {
+          const seg = player.segments[i]!;
+          const f = new Food();
+          f.x = seg.x + (Math.random() - 0.5) * 30;
+          f.y = seg.y + (Math.random() - 0.5) * 30;
+          f.color = Math.floor(Math.random() * 0xffffff);
+          f.size = 6 + Math.random() * 4;
+          f.value = 25; 
+          const id = "dead_" + Math.random().toString(36).substring(2, 9);
+          this.state.foods.set(id, f);
+        }
+        
+        // Respawn
+        player.x = Math.random() * 2000;
+        player.y = Math.random() * 2000;
+        player.score = player.isBot ? (20 + Math.random() * 100) : 0;
+        player.segments.clear();
+        player.isBoosting = false;
+        
+        const newDesiredSegments = 5 + Math.floor(player.score / 20);
+        for (let j = 0; j < newDesiredSegments; j++) {
+          const seg = new Segment();
+          seg.x = player.x;
+          seg.y = player.y;
+          player.segments.push(seg);
+        }
+        
+        return; // continue to next player
+      }
     });
   }
 
