@@ -1,5 +1,5 @@
 import { Room, Client } from "@colyseus/core";
-import { ArenaState, Player, Food, Segment } from "./schema/ArenaState";
+import { ArenaState, Player, Food, Segment, PowerUp } from "./schema/ArenaState";
 
 export class ArenaRoom extends Room<ArenaState> {
   maxClients = 50;
