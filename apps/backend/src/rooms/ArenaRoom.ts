@@ -36,7 +36,8 @@ export class ArenaRoom extends Room<ArenaState> {
   onJoin(client: Client, options: any) {
     console.log(client.sessionId, "joined!");
     const player = new Player();
-    player.name = (options?.name || "Player").substring(0, 16);
+    player.name  = (options?.name  || "Player").substring(0, 16);
+    player.color = (typeof options?.color === "number") ? options.color : 0x00ff88;
     // Spawn randomly in a 2000x2000 area
     player.x = Math.random() * 2000;
     player.y = Math.random() * 2000;
@@ -108,9 +109,10 @@ export class ArenaRoom extends Room<ArenaState> {
         player.speed = 4;
       }
 
-      // Smoothly rotate current angle towards target angle
-      // (Simplified for now: snap to angle)
-      player.currentAngle = player.targetAngle; 
+      // Smooth angle rotation towards target (lerp)
+      const angleDiff = player.targetAngle - player.currentAngle;
+      const wrapped   = ((angleDiff + Math.PI) % (2 * Math.PI)) - Math.PI;
+      player.currentAngle += wrapped * Math.min(1, 0.12 * dt);
       
       const vx = Math.cos(player.currentAngle) * player.speed;
       const vy = Math.sin(player.currentAngle) * player.speed;
@@ -253,10 +255,14 @@ export class ArenaRoom extends Room<ArenaState> {
   }
 
   spawnBots(count: number) {
-    const botNames = ["Shadow", "Viper", "Cobra", "Mamba", "Naga", "Hydra", "Python", "Rex", "Zeus", "Ares", "Titan", "Blaze", "Storm", "Chaos", "Apex"];
+    const botNames  = ["Shadow","Viper","Cobra","Mamba","Naga","Hydra","Python","Rex","Zeus","Ares","Titan","Blaze","Storm","Chaos","Apex"];
+    const botColors = [0xff6b35, 0xf72585, 0x4cc9f0, 0xffd60a, 0x06d6a0,
+                       0x8ecae6, 0xfb8500, 0xff595e, 0x7209b7, 0x00d4ff,
+                       0x06d6a0, 0xffd60a, 0xf72585, 0x4cc9f0, 0xff6b35];
     for (let i = 0; i < count; i++) {
-      const bot = new Player();
-      bot.name = botNames[i % botNames.length]!;
+      const bot  = new Player();
+      bot.name   = botNames [i % botNames.length]!;
+      bot.color  = botColors[i % botColors.length]!;
       bot.x = Math.random() * 2000;
       bot.y = Math.random() * 2000;
       bot.score = 20 + Math.floor(Math.random() * 100);
