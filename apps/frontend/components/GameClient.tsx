@@ -25,7 +25,7 @@ export default function GameClient() {
         });
 
         const serverUrl = process.env.NODE_ENV === "production" 
-          ? "wss://bambam-atillayapici.replit.app" 
+          ? "wss://bambam--atillayapici.replit.app" 
           : "ws://localhost:2567";
         const client = new Client(serverUrl);
         const playerGraphics = new Map<string, PIXI.Graphics>();
