@@ -10,6 +10,9 @@ export class ArenaRoom extends Room<ArenaState> {
     // Spawn initial foods
     this.spawnFood(150);
 
+    // Spawn initial powerups
+    this.spawnPowerUps(15);
+
     // Spawn 15 AI bots
     this.spawnBots(15);
 
@@ -100,8 +103,43 @@ export class ArenaRoom extends Room<ArenaState> {
         else if (player.y > 1900) player.targetAngle = -Math.PI / 2; // up
       }
 
-      // Boost Logic
-      if (player.isBoosting && player.score > 10) {
+      // Handle PowerUp Timer
+      if (player.activePowerup) {
+        const pt = ((player as any).powerupTimer || 0) - dt;
+        (player as any).powerupTimer = pt;
+        if (pt <= 0) {
+          player.activePowerup = "";
+        }
+      }
+
+      // Check PowerUp Collision
+      for (const [pId, p] of this.state.powerups.entries()) {
+        const dx = player.x - p.x;
+        const dy = player.y - p.y;
+        if (dx * dx + dy * dy < 1600) { // 40px radius
+          player.activePowerup = p.type;
+          (player as any).powerupTimer = 60 * 10; // ~10 seconds
+          this.state.powerups.delete(pId);
+          this.spawnPowerUps(1);
+        }
+      }
+
+      // Magnet Effect
+      if (player.activePowerup === "magnet") {
+        for (const [_, food] of this.state.foods.entries()) {
+          const dx = player.x - food.x;
+          const dy = player.y - food.y;
+          if (dx * dx + dy * dy < 62500) { // 250px radius
+            food.x += dx * 0.1 * dt;
+            food.y += dy * 0.1 * dt;
+          }
+        }
+      }
+
+      // Boost / Speed Logic
+      if (player.activePowerup === "speed") {
+        player.speed = 10;
+      } else if (player.isBoosting && player.score > 10) {
         player.speed = 8;
         player.score -= 10 * (deltaTime / 1000); // drain 10 score per second
       } else {
@@ -152,7 +190,8 @@ export class ArenaRoom extends Room<ArenaState> {
         
         if (dist < playerRadius + food.size) {
           // Eat food
-          player.score += food.value;
+          const multiplier = player.activePowerup === "x2" ? 2 : 1;
+          player.score += food.value * multiplier;
           this.state.foods.delete(foodId);
           this.spawnFood(1); // Respawn immediately to keep food constant
         }
@@ -186,21 +225,23 @@ export class ArenaRoom extends Room<ArenaState> {
 
       // --- SNAKE-TO-SNAKE COLLISION (DEATH) ---
       let died = false;
-      for (const [otherId, otherPlayer] of this.state.players.entries()) {
-        if (sessionId === otherId) continue;
-        
-        for (let i = 0; i < otherPlayer.segments.length; i++) {
-          const seg = otherPlayer.segments[i]!;
-          const dx = player.x - seg.x;
-          const dy = player.y - seg.y;
-          const distSq = dx * dx + dy * dy;
+      if (player.activePowerup !== "invincible") {
+        for (const [otherId, otherPlayer] of this.state.players.entries()) {
+          if (sessionId === otherId) continue;
           
-          if (distSq < 625) { // 25 radius collision
-            died = true;
-            break;
+          for (let i = 0; i < otherPlayer.segments.length; i++) {
+            const seg = otherPlayer.segments[i]!;
+            const dx = player.x - seg.x;
+            const dy = player.y - seg.y;
+            const distSq = dx * dx + dy * dy;
+            
+            if (distSq < 625) { // 25 radius collision
+              died = true;
+              break;
+            }
           }
+          if (died) break;
         }
-        if (died) break;
       }
 
       if (died) {
@@ -251,6 +292,18 @@ export class ArenaRoom extends Room<ArenaState> {
       f.value = Math.floor(f.size * 2);
       const id = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
       this.state.foods.set(id, f);
+    }
+  }
+
+  spawnPowerUps(count: number) {
+    const types = ["magnet", "invincible", "x2", "speed"];
+    for (let i = 0; i < count; i++) {
+      const p = new PowerUp();
+      p.x = Math.random() * 2000;
+      p.y = Math.random() * 2000;
+      p.type = types[Math.floor(Math.random() * types.length)]!;
+      const id = "pwrup_" + Math.random().toString(36).substring(2, 9);
+      this.state.powerups.set(id, p);
     }
   }
 

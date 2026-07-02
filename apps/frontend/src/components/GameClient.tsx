@@ -62,6 +62,7 @@ export default function GameClient() {
   const [selColor,    setSelColor]    = useState(0x00ff88);
   const [score,       setScore]       = useState(0);
   const [boosting,    setBoosting]    = useState(false);
+  const [activePower, setActivePower] = useState("");
   const [leaderboard, setLeaderboard] = useState<LBEntry[]>([]);
   const [miniDots,    setMiniDots]    = useState<MiniDot[]>([]);
   const [deathScore,  setDeathScore]  = useState(0);
@@ -110,6 +111,7 @@ export default function GameClient() {
       // ── COLYSEUS ──
       const client   = new Client(SERVER_URL);
       const foodGfx  = new Map<string, PIXI.Graphics>();
+      const pwGfx    = new Map<string, PIXI.Container>();
       const headGfx  = new Map<string, PIXI.Container>();
       const segMaps  = new Map<string, Map<any, PIXI.Graphics>>();
       const dotsArr: MiniDot[] = [];
@@ -131,6 +133,38 @@ export default function GameClient() {
         arr.sort((a,b)=>b.score-a.score);
         setLeaderboard(arr.slice(0,10));
       };
+
+      // ── PowerUps ──
+      const PWR_COLORS: Record<string, number> = { magnet: 0xf72585, invincible: 0x4cc9f0, x2: 0xffd60a, speed: 0xff595e };
+      const PWR_ICONS: Record<string, string>  = { magnet: "🧲", invincible: "🛡️", x2: "🌟", speed: "⚡" };
+
+      room.state.powerups.onAdd((p: any, pId: string) => {
+        const con = new PIXI.Container();
+        const g = new PIXI.Graphics();
+        const col = PWR_COLORS[p.type] || 0xffffff;
+        g.circle(0, 0, 18); g.fill({ color: col, alpha: 0.3 });
+        g.circle(0, 0, 12); g.fill({ color: col });
+        const txt = new PIXI.Text({ text: PWR_ICONS[p.type] || "❓", style: { fontSize: 14 } });
+        txt.anchor.set(0.5);
+        con.addChild(g, txt);
+        con.x = p.x; con.y = p.y;
+        foodLayer.addChild(con);
+        pwGfx.set(pId, con);
+        
+        const tick = () => { if (!con.destroyed) g.rotation += 0.05; };
+        app.ticker.add(tick);
+        (con as any)._tick = tick;
+      });
+
+      room.state.powerups.onRemove((_: any, pId: string) => {
+        const c = pwGfx.get(pId);
+        if (c) { 
+           app.ticker.remove((c as any)._tick);
+           foodLayer.removeChild(c); 
+           c.destroy(); 
+           pwGfx.delete(pId); 
+        }
+      });
 
       // ── Food ──
       room.state.foods.onAdd((food: any, fid: string) => {
@@ -210,14 +244,13 @@ export default function GameClient() {
           if (isMe) {
             const sc = Math.floor(player.score);
             if (sc !== myScore) {
-              // Food eaten? trigger sound + detect death
               if (sc > myScore && myScore>=0) audio?.eat();
               if (sc === 0 && prevScore > 30) { audio?.die(); setDeathScore(prevScore); setScreen("dead"); }
               prevScore = myScore;
               myScore = sc;
               setScore(sc);
             }
-            // Zoom: scale down as snake grows
+            setActivePower(player.activePowerup || "");
             targetZoom = Math.max(0.45, 1 - sc * 0.00045);
           }
         });
@@ -379,10 +412,25 @@ export default function GameClient() {
           ⭐ {score}
         </div>
 
-        {boosting&&(
+        {/* Boost indicator */}
+        {boosting && !activePower && (
           <div style={{position:"absolute",top:72,left:"50%",transform:"translateX(-50%)",
             color:"#ffd60a",fontFamily:"monospace",fontSize:12,letterSpacing:4,
             pointerEvents:"none",animation:"pulse .5s infinite alternate"}}>⚡ BOOST</div>
+        )}
+
+        {/* Active Powerup indicator */}
+        {activePower && (
+          <div style={{position:"absolute",top:72,left:"50%",transform:"translateX(-50%)",
+            background:"rgba(0,0,0,0.7)", border:`1px solid ${activePower==="magnet"?"#f72585":activePower==="invincible"?"#4cc9f0":activePower==="x2"?"#ffd60a":"#ff595e"}`,
+            borderRadius:8, padding:"6px 16px",
+            color: activePower==="magnet"?"#f72585":activePower==="invincible"?"#4cc9f0":activePower==="x2"?"#ffd60a":"#ff595e",
+            fontFamily:"monospace", fontSize:14, fontWeight:"bold",
+            display:"flex", alignItems:"center", gap:8,
+            boxShadow:`0 0 15px ${activePower==="magnet"?"#f72585":activePower==="invincible"?"#4cc9f0":activePower==="x2"?"#ffd60a":"#ff595e"}44`,
+            pointerEvents:"none", animation:"pulse .5s infinite alternate"}}>
+             {activePower==="magnet"?"🧲 MIKNATIS":activePower==="invincible"?"🛡️ ÖLÜMSÜZLÜK":activePower==="x2"?"🌟 X2 PUAN":"⚡ HIZ"} AKTİF
+          </div>
         )}
 
         {/* Leaderboard */}
