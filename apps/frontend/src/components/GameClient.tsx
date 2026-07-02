@@ -27,8 +27,8 @@ export default function GameClient() {
 
     const initApp = async () => {
       try {
-        const localApp = new PIXI.Application();
-        await localApp.init({
+        app = new PIXI.Application();
+        await app.init({
           canvas: canvasRef.current!,
           width: window.innerWidth,
           height: window.innerHeight,
@@ -36,12 +36,6 @@ export default function GameClient() {
           resolution: window.devicePixelRatio || 1,
           autoDensity: true,
         });
-
-        if (destroyed) {
-          try { localApp.destroy({ removeView: true }); } catch (_) {}
-          return;
-        }
-        app = localApp;
 
         // Grid
         const grid = new PIXI.Graphics();
@@ -89,7 +83,7 @@ export default function GameClient() {
               app.stage.position.y = app.screen.height / 2;
             }
 
-            player.onChange = () => {
+            player.onChange(() => {
               console.log("player onChange:", sessionId, player.x, player.y);
               const graphic = playerGraphics.get(sessionId);
               if (graphic) { graphic.x = player.x; graphic.y = player.y; graphic.rotation = player.currentAngle; }
@@ -99,7 +93,7 @@ export default function GameClient() {
                 app.stage.position.x = app.screen.width / 2;
                 app.stage.position.y = app.screen.height / 2;
               }
-            };
+            });
           };
 
           const removePlayer = (sessionId: string) => {
@@ -119,15 +113,15 @@ export default function GameClient() {
           });
 
           // Listen for subsequent additions/removals
-          room.state.players.onAdd = (player: any, sessionId: string) => {
+          room.state.players.onAdd((player: any, sessionId: string) => {
             console.log("onAdd triggered for:", sessionId);
             addPlayer(player, sessionId);
-          };
+          });
 
-          room.state.players.onRemove = (_player: any, sessionId: string) => {
+          room.state.players.onRemove((_player: any, sessionId: string) => {
             console.log("onRemove triggered for:", sessionId);
             removePlayer(sessionId);
-          };
+          });
 
         } catch (e: any) {
           setStatus("error");

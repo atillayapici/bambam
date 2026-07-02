@@ -10,14 +10,16 @@ async function test() {
     const room = await client.joinOrCreate("arena");
     console.log("Joined room successfully! SessionId:", room.sessionId);
     
-    room.onStateChange((state) => {
-      console.log("onStateChange triggered. State players size:", state.players ? state.players.size : "undefined");
-      console.log("Players map in state:", state.players);
-    });
-
-    room.state.players.onAdd = (player, sessionId) => {
-      console.log("Player added in test client:", sessionId, player);
-    };
+    // Test if onAdd is a method
+    if (typeof room.state.players.onAdd === 'function') {
+      room.state.players.onAdd((player, sessionId) => {
+        console.log("Player added in test client via method:", sessionId, player.x);
+      });
+    } else {
+      room.state.players.onAdd = (player, sessionId) => {
+        console.log("Player added in test client via property:", sessionId, player.x);
+      };
+    }
 
     setTimeout(() => {
       console.log("Exiting test client...");
