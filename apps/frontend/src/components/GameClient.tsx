@@ -141,6 +141,7 @@ export default function GameClient() {
               segMap.set(seg, s);
 
               seg.onChange(() => {
+                if (!s || s.destroyed) return;
                 s.x = seg.x;
                 s.y = seg.y;
               });
