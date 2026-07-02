@@ -1,0 +1,8 @@
+{
+  "name": "worms-zone-mmo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}
