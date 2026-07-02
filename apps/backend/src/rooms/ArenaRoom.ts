@@ -20,6 +20,14 @@ export class ArenaRoom extends Room<ArenaState> {
         player.targetAngle = message.targetAngle;
       }
     });
+
+    // Listen for boost messages from the client
+    this.onMessage("boost", (client, message: { state: boolean }) => {
+      const player = this.state.players.get(client.sessionId);
+      if (player) {
+        player.isBoosting = message.state;
+      }
+    });
   }
 
   onJoin(client: Client, options: any) {
@@ -51,6 +59,15 @@ export class ArenaRoom extends Room<ArenaState> {
     const dt = deltaTime / (1000 / 60);
 
     this.state.players.forEach((player) => {
+      // Boost Logic
+      if (player.isBoosting && player.score > 10) {
+        player.speed = 8;
+        player.score -= 10 * (deltaTime / 1000); // drain 10 score per second
+      } else {
+        player.isBoosting = false;
+        player.speed = 4;
+      }
+
       // Smoothly rotate current angle towards target angle
       // (Simplified for now: snap to angle)
       player.currentAngle = player.targetAngle; 
@@ -96,13 +113,32 @@ export class ArenaRoom extends Room<ArenaState> {
           player.score += food.value;
           this.state.foods.delete(foodId);
           this.spawnFood(1); // Respawn immediately to keep food constant
+        }
+      }
 
-          // Add a new segment
-          const newSeg = new Segment();
-          const lastSeg = player.segments.length > 0 ? player.segments[player.segments.length - 1]! : player;
-          newSeg.x = lastSeg.x;
-          newSeg.y = lastSeg.y;
-          player.segments.push(newSeg);
+      // Dynamic segment management (Grow/Shrink based on score)
+      const desiredSegments = 5 + Math.floor(player.score / 20);
+      if (player.segments.length < desiredSegments) {
+        const newSeg = new Segment();
+        const lastSeg = player.segments.length > 0 ? player.segments[player.segments.length - 1]! : player;
+        newSeg.x = lastSeg.x;
+        newSeg.y = lastSeg.y;
+        player.segments.push(newSeg);
+      } else if (player.segments.length > desiredSegments && player.segments.length > 5) {
+        // Pop the tail due to score drain (e.g. from boosting)
+        const droppedSeg = player.segments.pop();
+        if (droppedSeg) {
+          // Occasionally drop food where the tail was
+          if (Math.random() > 0.5) {
+            const f = new Food();
+            f.x = droppedSeg.x;
+            f.y = droppedSeg.y;
+            f.color = Math.floor(Math.random() * 0xffffff);
+            f.size = 5;
+            f.value = 10;
+            const id = "drop_" + Math.random().toString(36).substring(2, 9);
+            this.state.foods.set(id, f);
+          }
         }
       }
     });

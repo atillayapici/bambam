@@ -126,6 +126,8 @@ export default function GameClient() {
               }
             });
 
+            const segMap = new Map<any, PIXI.Graphics>();
+
             // Segment (Tail) additions
             player.segments.onAdd((seg: any, index: number) => {
               const s = new PIXI.Graphics();
@@ -136,11 +138,27 @@ export default function GameClient() {
               s.y = seg.y;
               app.stage.addChildAt(s, 2); // Below head, above food
               segmentGraphics.get(sessionId)?.push(s);
+              segMap.set(seg, s);
 
               seg.onChange(() => {
                 s.x = seg.x;
                 s.y = seg.y;
               });
+            });
+
+            // Segment removals (e.g. from boosting)
+            player.segments.onRemove((seg: any) => {
+              const s = segMap.get(seg);
+              if (s) {
+                app.stage.removeChild(s);
+                s.destroy();
+                segMap.delete(seg);
+                const arr = segmentGraphics.get(sessionId);
+                if (arr) {
+                  const i = arr.indexOf(s);
+                  if (i > -1) arr.splice(i, 1);
+                }
+              }
             });
             
             setPlayerCount(room.state.players.size);
@@ -174,10 +192,23 @@ export default function GameClient() {
 
         app.stage.eventMode = "static";
         app.stage.hitArea = new PIXI.Rectangle(-10000, -10000, 20000, 20000);
+        
         app.stage.on("pointermove", (e) => {
           if (!roomRef.current) return;
           const angle = Math.atan2(e.global.y - app.screen.height / 2, e.global.x - app.screen.width / 2);
           roomRef.current.send("move", { targetAngle: angle });
+        });
+
+        app.stage.on("pointerdown", () => {
+          if (roomRef.current) roomRef.current.send("boost", { state: true });
+        });
+
+        app.stage.on("pointerup", () => {
+          if (roomRef.current) roomRef.current.send("boost", { state: false });
+        });
+
+        app.stage.on("pointerupoutside", () => {
+          if (roomRef.current) roomRef.current.send("boost", { state: false });
         });
 
         resizeHandler = () => app.renderer.resize(window.innerWidth, window.innerHeight);
