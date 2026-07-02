@@ -58,23 +58,34 @@ export default function GameClient() {
           console.log("✅ Joined room successfully", room.sessionId);
 
           room.state.players.onAdd((player: any, sessionId: string) => {
-            const g = new PIXI.Graphics();
             const isMe = sessionId === room.sessionId;
+            const g = new PIXI.Graphics();
 
+            // Glow ring
+            g.circle(0, 0, isMe ? 28 : 26);
+            g.fill({ color: isMe ? 0x00ff88 : 0xff4444, alpha: 0.15 });
             // Worm head
             g.circle(0, 0, isMe ? 22 : 20);
             g.fill({ color: isMe ? 0x00ff88 : 0xff4444 });
-
-            // Eye
+            // Eye white
             g.circle(10, -6, 5);
             g.fill({ color: 0xffffff });
-            g.circle(12, -6, 3);
+            // Eye pupil
+            g.circle(11, -6, 3);
             g.fill({ color: 0x000000 });
 
             g.x = player.x;
             g.y = player.y;
             app.stage.addChild(g);
             playerGraphics.set(sessionId, g);
+
+            // ✅ Center camera IMMEDIATELY on spawn
+            if (isMe) {
+              app.stage.pivot.x = player.x;
+              app.stage.pivot.y = player.y;
+              app.stage.position.x = app.screen.width / 2;
+              app.stage.position.y = app.screen.height / 2;
+            }
 
             player.onChange(() => {
               const graphic = playerGraphics.get(sessionId);
@@ -84,7 +95,7 @@ export default function GameClient() {
                 graphic.rotation = player.currentAngle;
               }
 
-              if (sessionId === room.sessionId) {
+              if (isMe) {
                 app.stage.pivot.x = player.x;
                 app.stage.pivot.y = player.y;
                 app.stage.position.x = app.screen.width / 2;
