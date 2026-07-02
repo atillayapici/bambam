@@ -57,6 +57,7 @@ export default function GameClient() {
           setStatusMsg(`✅ Bağlandı | ID: ${room.sessionId.slice(0, 8)}`);
 
           const addPlayer = (player: any, sessionId: string) => {
+            console.log("addPlayer called for:", sessionId, player);
             if (playerGraphics.has(sessionId)) return;
 
             const isMe = sessionId === room.sessionId;
@@ -71,9 +72,11 @@ export default function GameClient() {
             app.stage.addChild(g);
             playerGraphics.set(sessionId, g);
 
+            console.log("Setting player count to:", room.state.players.size);
             setPlayerCount(room.state.players.size);
 
             if (isMe) {
+              console.log("Centering camera on me:", player.x, player.y);
               app.stage.pivot.x = player.x;
               app.stage.pivot.y = player.y;
               app.stage.position.x = app.screen.width / 2;
@@ -81,6 +84,7 @@ export default function GameClient() {
             }
 
             player.onChange = () => {
+              console.log("player onChange:", sessionId, player.x, player.y);
               const graphic = playerGraphics.get(sessionId);
               if (graphic) { graphic.x = player.x; graphic.y = player.y; graphic.rotation = player.currentAngle; }
               if (isMe) {
@@ -93,22 +97,29 @@ export default function GameClient() {
           };
 
           const removePlayer = (sessionId: string) => {
+            console.log("removePlayer called for:", sessionId);
             const g = playerGraphics.get(sessionId);
             if (g) { app.stage.removeChild(g); g.destroy(); playerGraphics.delete(sessionId); }
             setPlayerCount(room.state.players.size);
           };
 
+          console.log("Room joined. SessionId:", room.sessionId);
+          console.log("Initial state players size:", room.state.players.size);
+
           // Synchronize already existing players in the state
           room.state.players.forEach((player: any, sessionId: string) => {
+            console.log("Syncing initial player:", sessionId);
             addPlayer(player, sessionId);
           });
 
           // Listen for subsequent additions/removals
           room.state.players.onAdd = (player: any, sessionId: string) => {
+            console.log("onAdd triggered for:", sessionId);
             addPlayer(player, sessionId);
           };
 
           room.state.players.onRemove = (_player: any, sessionId: string) => {
+            console.log("onRemove triggered for:", sessionId);
             removePlayer(sessionId);
           };
 
