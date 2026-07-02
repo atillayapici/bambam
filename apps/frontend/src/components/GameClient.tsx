@@ -17,6 +17,7 @@ export default function GameClient() {
   const [status, setStatus] = useState<Status>("connecting");
   const [statusMsg, setStatusMsg] = useState("Sunucuya bağlanılıyor...");
   const [playerCount, setPlayerCount] = useState(0);
+  const [score, setScore] = useState(0);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -48,6 +49,8 @@ export default function GameClient() {
 
         const client = new Client(SERVER_URL);
         const playerGraphics = new Map<string, PIXI.Graphics>();
+        const segmentGraphics = new Map<string, PIXI.Graphics[]>();
+        const foodGraphics = new Map<string, PIXI.Graphics>();
 
         try {
           setStatusMsg(`Bağlanılıyor → ${SERVER_URL}`);
@@ -56,11 +59,37 @@ export default function GameClient() {
           setStatus("connected");
           setStatusMsg(`✅ Bağlandı | ID: ${room.sessionId.slice(0, 8)}`);
 
+          // ==============================
+          // FOOD RENDERING
+          // ==============================
+          room.state.foods.onAdd((food: any, foodId: string) => {
+            const g = new PIXI.Graphics();
+            g.circle(0, 0, food.size);
+            g.fill({ color: food.color });
+            g.x = food.x;
+            g.y = food.y;
+            app.stage.addChildAt(g, 1); // just above grid
+            foodGraphics.set(foodId, g);
+          });
+
+          room.state.foods.onRemove((_food: any, foodId: string) => {
+            const g = foodGraphics.get(foodId);
+            if (g) {
+              app.stage.removeChild(g);
+              g.destroy();
+              foodGraphics.delete(foodId);
+            }
+          });
+
+          // ==============================
+          // PLAYER RENDERING
+          // ==============================
           const addPlayer = (player: any, sessionId: string) => {
-            console.log("addPlayer called for:", sessionId, player);
             if (playerGraphics.has(sessionId)) return;
 
             const isMe = sessionId === room.sessionId;
+            
+            // Render Head
             const g = new PIXI.Graphics();
             g.circle(0, 0, isMe ? 28 : 26);
             g.fill({ color: isMe ? 0x00ff88 : 0xff4444, alpha: 0.2 });
@@ -69,57 +98,71 @@ export default function GameClient() {
             g.circle(10, -6, 5); g.fill({ color: 0xffffff });
             g.circle(11, -6, 3); g.fill({ color: 0x000000 });
             g.x = player.x; g.y = player.y;
+            // Add head at the very top
             app.stage.addChild(g);
             playerGraphics.set(sessionId, g);
+            
+            segmentGraphics.set(sessionId, []);
 
-            console.log("Setting player count to:", room.state.players.size);
-            setPlayerCount(room.state.players.size);
-
+            // Initial camera position
             if (isMe) {
-              console.log("Centering camera on me:", player.x, player.y);
               app.stage.pivot.x = player.x;
               app.stage.pivot.y = player.y;
               app.stage.position.x = app.screen.width / 2;
               app.stage.position.y = app.screen.height / 2;
+              setScore(player.score);
             }
 
+            // Head and Score updates
             player.onChange(() => {
-              console.log("player onChange:", sessionId, player.x, player.y);
               const graphic = playerGraphics.get(sessionId);
               if (graphic) { graphic.x = player.x; graphic.y = player.y; graphic.rotation = player.currentAngle; }
               if (isMe) {
+                setScore(player.score);
                 app.stage.pivot.x = player.x;
                 app.stage.pivot.y = player.y;
                 app.stage.position.x = app.screen.width / 2;
                 app.stage.position.y = app.screen.height / 2;
               }
             });
-          };
 
-          const removePlayer = (sessionId: string) => {
-            console.log("removePlayer called for:", sessionId);
-            const g = playerGraphics.get(sessionId);
-            if (g) { app.stage.removeChild(g); g.destroy(); playerGraphics.delete(sessionId); }
+            // Segment (Tail) additions
+            player.segments.onAdd((seg: any, index: number) => {
+              const s = new PIXI.Graphics();
+              s.circle(0, 0, isMe ? 22 : 20);
+              const color = isMe ? 0x00cc66 : 0xcc3333; // Slightly darker than head
+              s.fill({ color, alpha: Math.max(0.3, 1 - index * 0.02) });
+              s.x = seg.x;
+              s.y = seg.y;
+              app.stage.addChildAt(s, 2); // Below head, above food
+              segmentGraphics.get(sessionId)?.push(s);
+
+              seg.onChange(() => {
+                s.x = seg.x;
+                s.y = seg.y;
+              });
+            });
+            
             setPlayerCount(room.state.players.size);
           };
 
-          console.log("Room joined. SessionId:", room.sessionId);
-          console.log("Initial state players size:", room.state.players.size);
+          const removePlayer = (sessionId: string) => {
+            const g = playerGraphics.get(sessionId);
+            if (g) { app.stage.removeChild(g); g.destroy(); playerGraphics.delete(sessionId); }
+            
+            const segs = segmentGraphics.get(sessionId);
+            if (segs) {
+              segs.forEach(s => { app.stage.removeChild(s); s.destroy(); });
+              segmentGraphics.delete(sessionId);
+            }
+            setPlayerCount(room.state.players.size);
+          };
 
-          // Synchronize already existing players in the state
-          room.state.players.forEach((player: any, sessionId: string) => {
-            console.log("Syncing initial player:", sessionId);
-            addPlayer(player, sessionId);
-          });
-
-          // Listen for subsequent additions/removals
           room.state.players.onAdd((player: any, sessionId: string) => {
-            console.log("onAdd triggered for:", sessionId);
             addPlayer(player, sessionId);
           });
 
           room.state.players.onRemove((_player: any, sessionId: string) => {
-            console.log("onRemove triggered for:", sessionId);
             removePlayer(sessionId);
           });
 
@@ -179,6 +222,7 @@ export default function GameClient() {
       }}>
         <div>🌐 {statusMsg}</div>
         {status === "connected" && <div>👥 Oyuncu: {playerCount}</div>}
+        {status === "connected" && <div>⭐ Skor: {score}</div>}
       </div>
     </div>
   );
