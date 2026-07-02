@@ -27,8 +27,8 @@ export default function GameClient() {
 
     const initApp = async () => {
       try {
-        app = new PIXI.Application();
-        await app.init({
+        const localApp = new PIXI.Application();
+        await localApp.init({
           canvas: canvasRef.current!,
           width: window.innerWidth,
           height: window.innerHeight,
@@ -36,6 +36,12 @@ export default function GameClient() {
           resolution: window.devicePixelRatio || 1,
           autoDensity: true,
         });
+
+        if (destroyed) {
+          try { localApp.destroy({ removeView: true }); } catch (_) {}
+          return;
+        }
+        app = localApp;
 
         // Grid
         const grid = new PIXI.Graphics();

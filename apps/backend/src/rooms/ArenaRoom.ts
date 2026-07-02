@@ -27,6 +27,7 @@ export class ArenaRoom extends Room<ArenaState> {
     player.y = Math.random() * 2000;
     
     this.state.players.set(client.sessionId, player);
+    console.log("Player added. Current server players size:", this.state.players.size);
   }
 
   onLeave(client: Client, consented: boolean) {
