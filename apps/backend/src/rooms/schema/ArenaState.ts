@@ -14,6 +14,7 @@ export class Food extends Schema {
 }
 
 export class Player extends Schema {
+  @type("string") name: string = "";
   @type("number") x: number = 0;
   @type("number") y: number = 0;
   @type("number") targetAngle: number = 0;

@@ -36,6 +36,7 @@ export class ArenaRoom extends Room<ArenaState> {
   onJoin(client: Client, options: any) {
     console.log(client.sessionId, "joined!");
     const player = new Player();
+    player.name = (options?.name || "Player").substring(0, 16);
     // Spawn randomly in a 2000x2000 area
     player.x = Math.random() * 2000;
     player.y = Math.random() * 2000;
@@ -252,11 +253,13 @@ export class ArenaRoom extends Room<ArenaState> {
   }
 
   spawnBots(count: number) {
+    const botNames = ["Shadow", "Viper", "Cobra", "Mamba", "Naga", "Hydra", "Python", "Rex", "Zeus", "Ares", "Titan", "Blaze", "Storm", "Chaos", "Apex"];
     for (let i = 0; i < count; i++) {
       const bot = new Player();
+      bot.name = botNames[i % botNames.length]!;
       bot.x = Math.random() * 2000;
       bot.y = Math.random() * 2000;
-      bot.score = 20 + Math.floor(Math.random() * 100); // Random starting score
+      bot.score = 20 + Math.floor(Math.random() * 100);
       bot.targetAngle = Math.random() * Math.PI * 2;
       bot.currentAngle = bot.targetAngle;
       bot.isBot = true;
