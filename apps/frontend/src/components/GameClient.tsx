@@ -5,7 +5,10 @@ import * as PIXI from "pixi.js";
 import { Client, Room } from "colyseus.js";
 
 // Production: Replit backend URL (will update when Replit is running)
-const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "ws://localhost:2567";
+const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 
+  (typeof window !== "undefined" && window.location.hostname !== "localhost"
+    ? "wss://bambam--atillayapici.replit.app"
+    : "ws://localhost:2567");
 
 export default function GameClient() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
