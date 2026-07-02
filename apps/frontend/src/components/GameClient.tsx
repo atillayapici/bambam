@@ -23,6 +23,7 @@ export default function GameClient() {
 
     let app: PIXI.Application;
     let resizeHandler: () => void;
+    let destroyed = false;
 
     const initApp = async () => {
       try {
@@ -121,9 +122,13 @@ export default function GameClient() {
 
     initApp();
     return () => {
-      if (roomRef.current) roomRef.current.leave();
+      if (destroyed) return;
+      destroyed = true;
+      if (roomRef.current) { roomRef.current.leave(); roomRef.current = null; }
       if (resizeHandler) window.removeEventListener("resize", resizeHandler);
-      if (app) app.destroy({ children: true });
+      if (app) {
+        try { app.destroy({ children: true }); } catch (_) { /* PixiJS v8 Strict Mode safe */ }
+      }
     };
   }, []);
 
