@@ -56,7 +56,7 @@ export default function GameClient() {
           setStatus("connected");
           setStatusMsg(`✅ Bağlandı | ID: ${room.sessionId.slice(0, 8)}`);
 
-          room.state.players.onAdd((player: any, sessionId: string) => {
+          room.state.players.onAdd = (player: any, sessionId: string) => {
             const isMe = sessionId === room.sessionId;
             const g = new PIXI.Graphics();
             g.circle(0, 0, isMe ? 28 : 26);
@@ -78,7 +78,7 @@ export default function GameClient() {
               app.stage.position.y = app.screen.height / 2;
             }
 
-            player.onChange(() => {
+            player.onChange = (changes: any) => {
               const graphic = playerGraphics.get(sessionId);
               if (graphic) { graphic.x = player.x; graphic.y = player.y; graphic.rotation = player.currentAngle; }
               if (isMe) {
@@ -87,14 +87,14 @@ export default function GameClient() {
                 app.stage.position.x = app.screen.width / 2;
                 app.stage.position.y = app.screen.height / 2;
               }
-            });
-          });
+            };
+          };
 
-          room.state.players.onRemove((_player: any, sessionId: string) => {
+          room.state.players.onRemove = (_player: any, sessionId: string) => {
             const g = playerGraphics.get(sessionId);
             if (g) { app.stage.removeChild(g); g.destroy(); playerGraphics.delete(sessionId); }
             setPlayerCount(prev => Math.max(0, prev - 1));
-          });
+          };
 
         } catch (e: any) {
           setStatus("error");
