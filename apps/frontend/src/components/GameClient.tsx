@@ -56,7 +56,9 @@ export default function GameClient() {
           setStatus("connected");
           setStatusMsg(`✅ Bağlandı | ID: ${room.sessionId.slice(0, 8)}`);
 
-          room.state.players.onAdd = (player: any, sessionId: string) => {
+          const addPlayer = (player: any, sessionId: string) => {
+            if (playerGraphics.has(sessionId)) return;
+
             const isMe = sessionId === room.sessionId;
             const g = new PIXI.Graphics();
             g.circle(0, 0, isMe ? 28 : 26);
@@ -69,7 +71,7 @@ export default function GameClient() {
             app.stage.addChild(g);
             playerGraphics.set(sessionId, g);
 
-            setPlayerCount(prev => prev + 1);
+            setPlayerCount(room.state.players.size);
 
             if (isMe) {
               app.stage.pivot.x = player.x;
@@ -78,7 +80,7 @@ export default function GameClient() {
               app.stage.position.y = app.screen.height / 2;
             }
 
-            player.onChange = (changes: any) => {
+            player.onChange = () => {
               const graphic = playerGraphics.get(sessionId);
               if (graphic) { graphic.x = player.x; graphic.y = player.y; graphic.rotation = player.currentAngle; }
               if (isMe) {
@@ -90,10 +92,24 @@ export default function GameClient() {
             };
           };
 
-          room.state.players.onRemove = (_player: any, sessionId: string) => {
+          const removePlayer = (sessionId: string) => {
             const g = playerGraphics.get(sessionId);
             if (g) { app.stage.removeChild(g); g.destroy(); playerGraphics.delete(sessionId); }
-            setPlayerCount(prev => Math.max(0, prev - 1));
+            setPlayerCount(room.state.players.size);
+          };
+
+          // Synchronize already existing players in the state
+          room.state.players.forEach((player: any, sessionId: string) => {
+            addPlayer(player, sessionId);
+          });
+
+          // Listen for subsequent additions/removals
+          room.state.players.onAdd = (player: any, sessionId: string) => {
+            addPlayer(player, sessionId);
+          };
+
+          room.state.players.onRemove = (_player: any, sessionId: string) => {
+            removePlayer(sessionId);
           };
 
         } catch (e: any) {
